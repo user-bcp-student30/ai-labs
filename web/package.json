@@ -10,26 +10,29 @@
     "audit:workshop": "npm audit --audit-level=moderate"
   },
   "dependencies": {
-    "@angular/common": "21.2.19",
-    "@angular/compiler": "21.2.19",
-    "@angular/core": "21.2.19",
-    "@angular/forms": "21.2.19",
-    "@angular/platform-browser": "21.2.19",
-    "@angular/router": "21.2.19",
-    "axios": "0.31.0",
-    "lodash": "4.17.21",
+    "@angular/common": "21.2.25",
+    "@angular/compiler": "21.2.25",
+    "@angular/core": "21.2.25",
+    "@angular/forms": "21.2.25",
+    "@angular/platform-browser": "21.2.25",
+    "@angular/router": "21.2.25",
+    "axios": "0.34.0",
+    "lodash": "4.18.1",
     "rxjs": "7.8.2",
     "tslib": "2.8.1",
     "zone.js": "0.15.1"
   },
   "devDependencies": {
-    "@angular-devkit/build-angular": "21.2.19",
-    "@angular/cli": "21.2.19",
-    "@angular/compiler-cli": "21.2.19",
+    "@angular-devkit/build-angular": "21.2.28",
+    "@angular/cli": "21.2.28",
+    "@angular/compiler-cli": "21.2.25",
     "@types/lodash": "4.17.20",
-    "@vitest/coverage-v8": "3.2.4",
+    "@vitest/coverage-v8": "4.1.12",
     "typescript": "5.9.3",
-    "vitest": "3.2.4"
+    "vitest": "4.1.12"
+  },
+  "overrides": {
+    "undici": "7.30.1"
   },
   "engines": {
     "node": ">=22.12.0"
