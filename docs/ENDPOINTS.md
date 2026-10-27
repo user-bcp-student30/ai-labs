@@ -71,7 +71,7 @@ Ejemplo compatible con el codigo y los datos de prueba:
 | Credenciales rechazadas u otra respuesta no 2xx | Axios rechaza la llamada. La UI muestra `No se pudo autenticar a <username>.` y como detalle usa `response.data.message`, luego `error.message`, y finalmente `Error desconocido`. No hay manejo especifico por status. |
 | Timeout | A los 5000 ms Axios rechaza la llamada; se muestra el mismo prefijo y el mensaje de error disponible. El estado `busy` se limpia en `finally`. |
 | Error de red u otro error de Axios | Se muestra el mismo prefijo y `error.message` si existe; en su defecto, `Error desconocido`. |
-| Token presente pero `user` ausente | El componente acepta el token y navega. `saveSession()` persiste `JSON.stringify(user)`; para `undefined`, el almacenamiento web lo convierte en el texto `undefined`. Luego `DashboardComponent` llama a `getUser()`, cuyo `JSON.parse` lanza antes del bloque `try` que maneja errores de tareas. La UI no tiene un manejo especifico para este caso. |
+| Token presente pero `user` ausente | El componente muestra `El backend respondió sin usuario.` y no guarda la sesion ni navega. El cliente no trata la respuesta como una sesion valida; el contrato real del backend sobre la obligatoriedad de `user` no se modifica ni se valida aqui. |
 | `user` es JSON valido pero no cumple la forma tipada | `getUser()` devuelve `{}`. El dashboard continua con username vacio si hay token. |
 
 ### 5. Notas de seguridad
