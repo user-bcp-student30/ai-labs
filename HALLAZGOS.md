@@ -22,7 +22,45 @@ Contrato observado en el codigo; no hay un contrato acordado documentado en `doc
 | H-WEB-06 | web | Validaciones de login anidadas | Refactor | Las comprobaciones de usuario y contrasena se cambiaron a retornos anticipados, conservando mensajes y caminos de login. La caracterizacion previa y posterior paso; build exitoso. | `web/src/app/login/login.component.ts:31`; `web/src/app/login/login.component.ts:33`; `web/src/app/login/login.component.ts:35`; `web/src/app/login/login.component.ts:37` | baja | Resuelto |
 | H-WEB-07 | web | Pruebas visibles limitadas a una utilidad | Sugerencia | Resuelto: Vitest caracteriza login/errores, sesion y preferencias, peticion de tareas, filtrado/orden, etiquetas, estados y logout; cobertura registrada. | `web/src/app/login/login.component.spec.ts:42`; `web/src/app/login/login.component.spec.ts:88`; `web/src/app/dashboard/dashboard.component.spec.ts:47`; `web/src/app/dashboard/dashboard.component.spec.ts:57`; `web/src/app/dashboard/dashboard.component.spec.ts:74`; `web/src/app/dashboard/dashboard.component.spec.ts:92`; `web/src/app/dashboard/dashboard.component.spec.ts:103`; `web/src/app/services/auth.service.spec.ts:39`; `web/src/app/services/tasks.service.spec.ts:26` | baja | Resuelto |
 | H-WEB-08 | web | Respuesta de login sin usuario provoca excepcion al abrir dashboard | Bug | `LoginResponse.user` es opcional, pero el login acepta token sin usuario; `saveSession()` persiste `JSON.stringify(undefined)` y `getUser()` lanza al ejecutar `JSON.parse` fuera del `try` del dashboard. Pendiente definir y validar respuesta incompleta; no se adapta un test para aceptar el fallo. | `web/src/app/models/auth.model.ts:17`; `web/src/app/login/login.component.ts:48`; `web/src/app/services/auth.service.ts:44`; `web/src/app/services/auth.service.ts:60`; `web/src/app/dashboard/dashboard.component.ts:47` | media | Pendiente |
+| H-WEB-09 | web | Error de login completo se escribe en consola | Candidato de seguridad | La peticion de login lleva la solicitud al servicio y el bloque de error imprime el objeto completo; un error Axios puede incluir datos de configuracion de la peticion, creando riesgo de exposicion de informacion de autenticacion en la consola. | `web/src/app/login/login.component.ts:42`; `web/src/app/login/login.component.ts:43`; `web/src/app/login/login.component.ts:44`; `web/src/app/login/login.component.ts:58`; `web/src/app/services/auth.service.ts:31` | media (propuesta) | CANDIDATO |
+| H-WEB-10 | web | Consulta de tareas sin timeout explicito | Candidato de estabilidad | `getTasks()` no define timeout y el dashboard solo termina la carga cuando la promesa resuelve o rechaza; una solicitud que no termina puede dejar la pantalla cargando. | `web/src/app/services/tasks.service.ts:8`; `web/src/app/services/tasks.service.ts:9`; `web/src/app/services/tasks.service.ts:10`; `web/src/app/dashboard/dashboard.component.ts:30`; `web/src/app/dashboard/dashboard.component.ts:72`; `web/src/app/dashboard/dashboard.component.ts:78` | media (propuesta) | CANDIDATO |
+| H-WEB-11 | web | Username concatenado sin codificacion en query de tareas | Candidato funcional | El username se concatena directamente en `owner`; caracteres reservados pueden alterar la interpretacion del query o truncar el valor. La documentacion del endpoint deja pendiente definir usernames permitidos o codificarlo. | `web/src/app/services/tasks.service.ts:10`; `docs/ENDPOINTS.md:86`; `docs/ENDPOINTS.md:96`; `docs/ENDPOINTS.md:157` | baja (propuesta) | CANDIDATO |
+| H-WEB-12 | web | Comparador de prioridades devuelve 1 tambien en empates | Candidato funcional | El comparador devuelve `1` cuando las prioridades son iguales; no define un resultado de igualdad y puede producir un orden de empates no determinista respecto del contrato esperado de presentacion. | `web/src/app/dashboard/dashboard.component.ts:61`; `web/src/app/dashboard/dashboard.component.ts:63`; `web/src/app/dashboard/dashboard.component.spec.ts:74` | baja (propuesta) | CANDIDATO |
 
 ### Validacion pendiente
 
-Para H-WEB-01, H-WEB-02, H-WEB-03, H-WEB-04, H-WEB-06 y H-WEB-07 se ejecutaron pruebas; resultados y cobertura estan registrados en `PLAN.md`. El build paso tras los cambios de producto. El flujo integrado de login/tareas fue probado con Axios simulado, no contra backends reales. H-WEB-01 y H-WEB-05 quedan Parciales por sus riesgos anotados. H-WEB-08 permanece Pendiente y no se oculta con una prueba que acepte la respuesta incompleta.
+Para H-WEB-01, H-WEB-02, H-WEB-03, H-WEB-04, H-WEB-06 y H-WEB-07 se ejecutaron pruebas; resultados y cobertura estan registrados en `PLAN.md`. El build paso tras los cambios de producto. El flujo integrado de login/tareas fue probado con Axios simulado, no contra backends reales. H-WEB-01 y H-WEB-05 quedan Parciales por sus riesgos anotados. H-WEB-08 permanece Pendiente y no se oculta con una prueba que acepte la respuesta incompleta. H-WEB-09 a H-WEB-12 son candidatos nuevos; requieren revision humana y validacion antes de aceptarlos como hallazgos.
+
+### Candidatos nuevos (revision humana pendiente)
+
+#### H-WEB-09: Error de login completo se escribe en consola
+- Estado: CANDIDATO
+- Evidencia: `web/src/app/login/login.component.ts:42-44` construye la solicitud de login; `web/src/app/login/login.component.ts:58` imprime el error completo; `web/src/app/services/auth.service.ts:31` ejecuta la llamada HTTP.
+- Impacto: Un objeto de error HTTP puede contener datos de configuracion de la solicitud, por lo que su impresion podria exponer informacion de autenticacion en la consola.
+- Prioridad propuesta: Media.
+- Contrato potencialmente afectado: Confidencialidad de la solicitud `POST /auth/login` y manejo de errores en el cliente web.
+- Como validarlo: Simular un error Axios que incluya datos de solicitud ficticios y comprobar que el registro de errores no expone campos sensibles.
+
+#### H-WEB-10: Consulta de tareas sin timeout explicito
+- Estado: CANDIDATO
+- Evidencia: `web/src/app/services/tasks.service.ts:8-12` hace la consulta sin configurar timeout; `web/src/app/dashboard/dashboard.component.ts:30,72,78` mantiene `loading` hasta que la promesa finaliza.
+- Impacto: Si la solicitud queda pendiente, el dashboard puede permanecer indefinidamente en estado de carga.
+- Prioridad propuesta: Media.
+- Contrato potencialmente afectado: Disponibilidad percibida del flujo `GET /api/tasks?owner=...`; no hay en la evidencia un limite de tiempo acordado.
+- Como validarlo: Probar una solicitud que no responda y acordar/verificar el comportamiento y el limite temporal esperado.
+
+#### H-WEB-11: Username concatenado sin codificacion en query de tareas
+- Estado: CANDIDATO
+- Evidencia: `web/src/app/services/tasks.service.ts:10` concatena el username en `owner`; `docs/ENDPOINTS.md:157` registra que los caracteres reservados no estan definidos y sugiere confirmar el conjunto permitido o codificar el valor.
+- Impacto: Un username que contenga caracteres reservados puede cambiar la interpretacion del query o impedir que el servidor reciba el valor esperado.
+- Prioridad propuesta: Baja, pendiente de confirmar el conjunto de usernames admitido.
+- Contrato potencialmente afectado: Query `owner` de `GET /api/tasks`.
+- Como validarlo: Con usernames ficticios que contengan caracteres reservados, comprobar que el servidor recibe el valor completo segun el contrato acordado.
+
+#### H-WEB-12: Comparador de prioridades devuelve 1 tambien en empates
+- Estado: CANDIDATO
+- Evidencia: `web/src/app/dashboard/dashboard.component.ts:61-63` devuelve `-1` o `1`, sin resultado de igualdad; `web/src/app/dashboard/dashboard.component.spec.ts:74-87` verifica el orden de prioridades distintas.
+- Impacto: No queda definido el orden esperado para tareas con igual prioridad; el orden de empates puede no respetar la entrada o un criterio acordado.
+- Prioridad propuesta: Baja.
+- Contrato potencialmente afectado: Orden de presentacion de tareas en el dashboard, especialmente prioridades iguales.
+- Como validarlo: Agregar pruebas con prioridades iguales y verificar el criterio de orden acordado y el comportamiento del comparador para elementos equivalentes.
