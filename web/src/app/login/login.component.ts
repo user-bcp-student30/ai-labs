@@ -45,12 +45,17 @@ export class LoginComponent {
         client: 'angular-workshop'
       };
       const response = await this.authService.login(request);
-      if (response && response.token) {
-        this.authService.saveSession(response.token, response.user, this.preferences);
-        await this.router.navigate(['/dashboard']);
-      } else {
+      if (!response || !response.token) {
         this.message = 'El backend respondió sin token.';
+        return;
       }
+      if (!response.user) {
+        this.message = 'El backend respondió sin usuario.';
+        return;
+      }
+
+      this.authService.saveSession(response.token, response.user, this.preferences);
+      await this.router.navigate(['/dashboard']);
     } catch (error: unknown) {
       const backendMessage = getErrorMessage(error, 'message', 'Error desconocido');
       this.message = 'No se pudo autenticar a ' + this.username + '.';

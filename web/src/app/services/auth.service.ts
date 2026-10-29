@@ -55,7 +55,7 @@ export class AuthService {
     }
   }
 
-  saveSession(token: string, user: AuthenticatedUser | undefined, preferences: UserPreferences): void {
+  saveSession(token: string, user: AuthenticatedUser, preferences: UserPreferences): void {
     this.token = token;
     localStorage.setItem(STORAGE_KEYS.user, JSON.stringify(user));
     localStorage.setItem(STORAGE_KEYS.preferences, JSON.stringify(preferences));

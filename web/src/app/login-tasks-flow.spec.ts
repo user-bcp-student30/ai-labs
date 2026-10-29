@@ -81,4 +81,30 @@ describe('Login to tasks flow', () => {
     expect(values.get('workshop_user')).toContain('student');
     expect(values.has('workshop_token')).toBe(false);
   });
+
+  it('does not create a session or request tasks when login omits the user', async () => {
+    postLogin.mockResolvedValue({ data: { token: 'test-token' } } as never);
+    const loginComponent = new LoginComponent(router as unknown as Router, authService);
+    loginComponent.username = 'student';
+    loginComponent.password = 'Workshop123!';
+
+    await loginComponent.login();
+
+    expect(loginComponent.message).toBe('El backend respondió sin usuario.');
+    expect(authService.getToken()).toBeNull();
+    expect(values.has('workshop_user')).toBe(false);
+    expect(router.navigate).not.toHaveBeenCalled();
+
+    const dashboardComponent = new DashboardComponent(
+      router as unknown as Router,
+      { detectChanges: vi.fn() } as unknown as ChangeDetectorRef,
+      { run: (callback: () => void) => callback() } as unknown as NgZone,
+      authService,
+      tasksService
+    );
+    await dashboardComponent.ngOnInit();
+
+    expect(router.navigate).toHaveBeenCalledWith(['/login']);
+    expect(getTasks).not.toHaveBeenCalled();
+  });
 });

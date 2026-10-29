@@ -120,6 +120,20 @@ describe('LoginComponent login validation', () => {
     expect(component.busy).toBe(false);
   });
 
+  it('rejects a response with a token but no user without saving a session', async () => {
+    authService.login.mockResolvedValue({ token: 'test-token' });
+    const component = createComponent();
+    component.username = 'student';
+    component.password = 'Workshop123!';
+
+    await component.login();
+
+    expect(component.message).toBe('El backend respondió sin usuario.');
+    expect(authService.saveSession).not.toHaveBeenCalled();
+    expect(router.navigate).not.toHaveBeenCalled();
+    expect(component.busy).toBe(false);
+  });
+
   it('shows the unavailable authentication service message and clears the busy state', async () => {
     authService.login.mockRejectedValue(new Error('offline'));
     vi.spyOn(console, 'error').mockImplementation(() => undefined);
