@@ -37,6 +37,26 @@ Puedes recorrer los tres componentes. Conserva las evidencias anteriores y añad
 
 Necesitas Docker con Compose y el motor iniciado. Podman Compose es otra opción si ya está preparado en tu equipo.
 
+Auth requiere una clave privada RSA en formato PEM fuera del repositorio. Genera una clave local y configura su ruta antes de iniciar Compose:
+
+```bash
+openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 -out auth-signing-key.pem
+export AUTH_TOKEN_SIGNING_KEY_FILE="$PWD/auth-signing-key.pem"
+```
+
+En PowerShell puedes generar la clave con .NET y configurar la ruta:
+
+```powershell
+$rsa = [System.Security.Cryptography.RSA]::Create(2048)
+$encoded = [Convert]::ToBase64String($rsa.ExportPkcs8PrivateKey())
+$lines = for ($i = 0; $i -lt $encoded.Length; $i += 64) { $encoded.Substring($i, [Math]::Min(64, $encoded.Length - $i)) }
+@('-----BEGIN PRIVATE KEY-----') + $lines + @('-----END PRIVATE KEY-----') | Set-Content -Encoding ascii .\auth-signing-key.pem
+$rsa.Dispose()
+$env:AUTH_TOKEN_SIGNING_KEY_FILE = (Resolve-Path .\auth-signing-key.pem).Path
+```
+
+No agregues la clave al repositorio. Para ejecutar auth localmente fuera de Compose, configura `AUTH_TOKEN_SIGNING_KEY_LOCATION` con la ruta del mismo PEM.
+
 ```bash
 docker compose up --build
 ```
@@ -55,6 +75,8 @@ Al terminar, Ctrl+C y después docker compose down. Esto conserva los volúmenes
 ## Ejecutar un componente
 
 Para desarrollar sin contenedores necesitas JDK 21 y Maven 3.9+ para auth; Python 3.13 para api; Node.js 22.12+ y npm para web. Usa una terminal por servicio y ejecuta los comandos desde la raíz:
+
+Auth requiere además `AUTH_TOKEN_SIGNING_KEY_LOCATION` con la ruta a una clave privada PEM de laboratorio no versionada.
 
 ```bash
 python tools/lab.py setup auth

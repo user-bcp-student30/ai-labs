@@ -2,6 +2,10 @@ name: ai-labs
 services:
   auth:
     build: ./auth
+    environment:
+      AUTH_TOKEN_SIGNING_KEY_LOCATION: /run/secrets/auth-signing-key
+    secrets:
+      - auth-signing-key
     ports:
       - "127.0.0.1:8080:8080"
   api:
@@ -27,3 +31,6 @@ services:
 volumes:
   api-data:
   api-uploads:
+secrets:
+  auth-signing-key:
+    file: "${AUTH_TOKEN_SIGNING_KEY_FILE:?Set AUTH_TOKEN_SIGNING_KEY_FILE to a PEM private key file}"

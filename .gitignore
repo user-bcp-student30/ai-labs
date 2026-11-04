@@ -19,3 +19,4 @@ api/uploads/*
 !api/uploads/.gitkeep
 output/
 .DS_Store
+/auth-signing-key.pem

@@ -4,11 +4,11 @@
 
 ### Alcance y contrato a preservar
 
-Este plan cubre únicamente H-AUTH-01, H-AUTH-02 y H-AUTH-03, todos confirmados y `Pendiente` en `HALLAZGOS.md`. No existe `docs/ENDPOINTS.md`; se toma como referencia el contrato observado allí: `POST /auth/login`, sus validaciones y códigos HTTP, y la respuesta exitosa con `token`, `expiresIn` de `3600`, `user` y `debug`. Se conservarán el endpoint, los campos de respuesta, la expiración de una hora y el comportamiento de autenticación válida e inválida.
+Este plan cubre únicamente H-AUTH-01, H-AUTH-02 y H-AUTH-03. H-AUTH-01 está resuelto, H-AUTH-02 sigue pendiente y H-AUTH-03 está aprobado en `HALLAZGOS.md`. No existe `docs/ENDPOINTS.md`; se toma como referencia el contrato observado allí: `POST /auth/login`, sus validaciones y códigos HTTP, y la respuesta exitosa con `token`, `expiresIn` de `3600`, `user` y `debug`. Se conservarán el endpoint, los campos de respuesta, la expiración de una hora y el comportamiento de autenticación válida e inválida.
 
 La representación interna del token debe cambiar para que sea verificable. Como no hay contrato acordado que documente cómo lo interpretan los consumidores, confirmar con sus responsables que tratan el token como opaco y acuerdan verificar el formato firmado antes de implementar. Esa coordinación no amplía el alcance de lectura o cambios de este plan.
 
-Las pruebas de caracterización descritas abajo se agregan y ejecutan antes de modificar código. Las pruebas posteriores de seguridad verifican los nuevos invariantes. No se declaran ejecuciones ni aprobaciones aún.
+Las pruebas de caracterización descritas abajo se ejecutaron antes de modificar código. Las pruebas posteriores de seguridad verifican los nuevos invariantes; los resultados reales se registran al final de este plan.
 
 ### H-AUTH-01 — Concatenación de credenciales en SQL
 
@@ -30,7 +30,7 @@ Las pruebas de caracterización descritas abajo se agregan y ejecutan antes de m
 
 ### H-AUTH-03 — Token Base64 sin firma con secreto embebido
 
-- **Hallazgo:** H-AUTH-03, “Token Base64 sin firma con secreto embebido”, estado `Pendiente` en `HALLAZGOS.md`.
+- **Hallazgo:** H-AUTH-03, “Token Base64 sin firma con secreto embebido”, estado `APROBADO` en `HALLAZGOS.md`.
 - **Problema:** Base64 no ofrece integridad ni autenticidad. El contenido y el secreto fijo son recuperables, por lo que un consumidor no puede confiar en que los claims provienen del servicio.
 - **Cambio propuesto:** emitir un token estándar firmado con claims explícitos de identidad/rol y expiración de una hora. Usar soporte JWT mantenido compatible con Quarkus, no criptografía casera. La clave de firma se suministrará externamente (por configuración segura o montaje de secreto), nunca desde el código. Preservar el campo público `token`, `expiresIn: 3600` y el resto de la respuesta observada. Agregar la dependencia de emisión solo si la revisión del árbol Maven confirma que no está disponible ya; justificarla por la firma/claims estándar, gestionarla con el BOM de Quarkus y revisarla con SCA. No modificar la política CORS de H-AUTH-05 en este alcance.
 - **Archivos a tocar:** `auth/src/main/java/com/bcp/workshop/auth/LegacyTokenUtil.java` o su reemplazo de emisión; `auth/src/main/java/com/bcp/workshop/auth/AuthResource.java` y la capa de servicio acotada si la emisión se extrae de Resource; `auth/src/main/resources/application.properties` para la configuración externa de la clave; `auth/pom.xml` solo si se aprueba la dependencia; pruebas de token y `auth/src/test/java/com/bcp/workshop/auth/AuthResourceTest.java`.
@@ -42,7 +42,7 @@ Las pruebas de caracterización descritas abajo se agregan y ejecutan antes de m
 1. Añadir y ejecutar primero las pruebas de caracterización HTTP para los tres hallazgos, sin cambiar el código productivo.
 2. Implementar H-AUTH-01; ejecutar sus pruebas de repositorio y las pruebas HTTP de caracterización.
 3. Implementar H-AUTH-02 con migración segura de datos existentes; revisar cualquier dependencia antes de incorporarla y ejecutar pruebas de hash, migración y login.
-4. Confirmar con los consumidores que el token es opaco y que pueden validar el formato firmado. Luego implementar H-AUTH-03, externalizar la clave y ejecutar las verificaciones criptográficas y regresión HTTP.
+4. Implementar H-AUTH-03 con formato JWT firmado y clave externa. La revisión de consumidores y la distribución de la clave pública quedan como evidencia de integración pendiente; este cambio no modifica componentes fuera de auth.
 5. Revisar cambios, dependencias y cobertura del código modificado; no cambiar el contrato observado. Actualizar los estados de `HALLAZGOS.md` solo con evidencia real después de implementación y revisión.
 
 La extracción de responsabilidades se limitará a lo necesario para verificar contraseñas y emitir tokens con claridad; H-AUTH-07 y los demás hallazgos de auth quedan fuera de este plan y no se marcan como resueltos.
@@ -50,7 +50,8 @@ La extracción de responsabilidades se limitará a lo necesario para verificar c
 ### Aprobación humana
 
 - 2026-11-02: el usuario aprobó este plan para H-AUTH-01, H-AUTH-02 y H-AUTH-03 mediante el mensaje “Aprobar PLAN.md”.
-- La confirmación de compatibilidad de los consumidores con el nuevo formato firmado del token sigue pendiente antes de implementar H-AUTH-03.
+- 2026-11-04: el usuario aprobó todo el alcance de H-AUTH-03. La decisión aplicada es JWT RS256 con claims `sub`, `role`, `iat` y `exp`, clave privada PEM externa y sin claim `client`.
+- La compatibilidad de consumidores y la distribución de la clave pública siguen pendientes de validación coordinada; no se cambió código de otros componentes.
 
 ### Registro de ejecuciones
 
@@ -62,3 +63,9 @@ La extracción de responsabilidades se limitará a lo necesario para verificar c
 - auth — H-AUTH-01, H-AUTH-02: `Set-Location auth; mvn verify` — PASS (10 pruebas, 0 fallos/errores), 2026-11-02. JaCoCo: clases Java modificadas 156/169 líneas (92.31%); supera la meta de 85%. La prueba cubre contrato HTTP, SQL parametrizado con username con comilla, migración transaccional/idempotente, PBKDF2 con salt y rechazo de hash inválido.
 - auth — H-AUTH-01, H-AUTH-02: CodeQL remoto y Dependency Review remoto — no ejecutados; recorrido local.
 - auth — H-AUTH-01, H-AUTH-02: revisión local de `git diff main -- auth/` y archivos nuevos; `Set-Location auth; mvn verify` — PASS (10 pruebas, 0 fallos/errores), 2026-11-02. JaCoCo actualizado para las clases modificadas: 149/169 líneas (88.17%), sobre 85%. H-AUTH-01 verificado como Resuelto. H-AUTH-02 regresa a Pendiente: `LegacyDatabase.initialize()` captura y no propaga fallos de migración (líneas 41-47), por lo que la transacción revierte los cambios pero la aplicación sigue inicializando con la base heredada.
+- auth — H-AUTH-03: baseline `python tools/lab.py test auth` — PASS (10 pruebas, 0 fallos/errores), 2026-11-04.
+- auth — H-AUTH-03: caracterización nueva `mvn -f auth/pom.xml -Dtest=AuthResourceTest test` antes del cambio — FAIL esperado en 2 aserciones: el token heredado era un único segmento, no JWT firmado.
+- auth — H-AUTH-03: `mvn -f auth/pom.xml -Dtest=AuthResourceTest test` posterior — PASS (5 pruebas, 0 fallos/errores); verifica RS256, `sub`, `role`, `iat`, `exp`, duración de una hora y rechazo de firma alterada.
+- auth — H-AUTH-03: `python tools/lab.py test auth` — PASS (12 pruebas, 0 fallos/errores). `mvn -f auth/pom.xml clean verify` — PASS (12 pruebas, 0 fallos/errores). JaCoCo: `AuthResource` 25/25 y `TokenService` más record 11/11 líneas (36/36, 100%).
+- auth — H-AUTH-03: dependencias resueltas `mvn -f auth/pom.xml dependency:list -DincludeScope=runtime`; `appmod-cve-assessment` del 2026-11-04 reporta 49 advisories en 11 dependencias: 2 críticas, 22 altas y 25 medias. H-AUTH-06 queda como candidato; no se actualizaron dependencias fuera del alcance aprobado.
+- auth — H-AUTH-03: validación `docker compose config` no ejecutada porque Docker no está instalado en el entorno.
