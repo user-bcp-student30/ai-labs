@@ -17,7 +17,7 @@ import java.util.Map;
 @Produces(MediaType.APPLICATION_JSON)
 public class AuthResource {
     @Inject
-    LegacyDatabase database;
+    AuthService authService;
 
     @POST
     @Path("/login")
@@ -32,7 +32,7 @@ public class AuthResource {
                     if (request.password == null || request.password.trim().isEmpty()) {
                         return Response.status(400).entity(Map.of("message", "Password is required")).build();
                     } else {
-                        UserRecord user = database.findByCredentials(request.username, request.password);
+                        UserRecord user = authService.authenticate(request.username, request.password);
                         if (user == null) {
                             return Response.status(401).entity(Map.of("message", "Invalid user " + request.username + " or password")).build();
                         } else {
