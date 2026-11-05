@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.Matchers.nullValue;
 import static org.hamcrest.Matchers.notNullValue;
 
 @QuarkusTest
@@ -35,6 +36,28 @@ class AuthResourceTest {
                 .statusCode(401)
                 .body("message", is("Invalid user student or password"));
     }
+
+        @Test
+        void rejectsInjectionLikeUsername() {
+                given()
+                                .contentType("application/json")
+                                .body("{\"username\":\"' OR '1'='1\",\"password\":\"Workshop123!\"}")
+                                .when().post("/auth/login")
+                                .then()
+                                .statusCode(401)
+                                .body("token", nullValue());
+        }
+
+        @Test
+        void rejectsInjectionLikePassword() {
+                given()
+                                .contentType("application/json")
+                                .body("{\"username\":\"student\",\"password\":\"' OR '1'='1\"}")
+                                .when().post("/auth/login")
+                                .then()
+                                .statusCode(401)
+                                .body("token", nullValue());
+        }
 
     @Test
     void rejectsNullOrBlankLoginFields() {
